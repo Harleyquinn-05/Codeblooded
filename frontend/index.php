@@ -1,113 +1,165 @@
-<?php include 'db.php'; ?>
+<?php
+session_start();
+include 'db.php';
+
+// Pagination setup
+$limit = 3;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+// Fetch users
+$sql = "SELECT * FROM ind LIMIT $offset, $limit";
+
+$result = $conn->query($sql);
+
+// Count total
+$totalUsers = $conn->query("SELECT COUNT(*) AS total FROM ind")->fetch_assoc()['total'];
+
+$totalPages = ceil($totalUsers / $limit);
+?>
+
 <!DOCTYPE html>
 <html>
 <head>
     <title>Skill Swap Platform</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 40px;
-            background: linear-gradient(to right, #f8f9fa, #e3f2fd);
-            color: #333;
-        }
-
-        h1 {
-            color: #2c3e50;
-        }
-
-        table {
-            width: 100%;
-            background-color: #ffffff;
-            border-collapse: collapse;
-            margin-top: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        th, td {
-            padding: 14px 18px;
-            border-bottom: 1px solid #dee2e6;
-            text-align: left;
-        }
-
-        th {
-            background-color: #007BFF;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #111;
             color: white;
+            padding: 20px;
         }
 
-        tr:hover {
-            background-color: #f1f1f1;
+        .container {
+            width: 80%;
+            margin: auto;
         }
 
-        a.button {
-            display: inline-block;
-            margin-bottom: 15px;
-            text-decoration: none;
-            color: white;
-            background-color: #007BFF;
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-weight: bold;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
         }
 
-        a.button:hover {
-            background-color: #0056b3;
+        .search-section {
+            display: flex;
+            gap: 10px;
         }
 
-        form.swap-form input {
-            padding: 5px;
-            width: 90%;
+        .card {
+            background-color: #1c1c1c;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            position: relative;
         }
 
-        form.swap-form button {
+        .name {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .skills {
+            margin-bottom: 10px;
+        }
+
+        .skills span {
+            background: #333;
             padding: 5px 10px;
-            background-color: #28a745;
+            border-radius: 15px;
+            margin: 3px;
+            display: inline-block;
+        }
+
+        .request-btn {
+            background-color: teal;
             color: white;
+            padding: 10px 15px;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+            float: right;
+        }
+
+        .request-btn:hover {
+            background-color: #00b3b3;
+        }
+
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .pagination a {
+            color: #fff;
+            padding: 8px 12px;
+            margin: 2px;
+            text-decoration: none;
+            background-color: #333;
             border-radius: 4px;
         }
 
-        form.swap-form button:hover {
-            background-color: #218838;
+        .pagination a.active {
+            background-color: teal;
+        }
+
+        .rating {
+            font-size: 0.9em;
+            color: #ccc;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Skill Swap Users</h1>
-    <a class="button" href="add_skill.php">➕ Add New Skill</a>
+<div class="container">
+    <div class="header">
+        <h2>Skill Swap Platform</h2>
+        <div>
+            <?php if (isset($_SESSION['username'])): ?>
+                Welcome, <?= htmlspecialchars($_SESSION['username']) ?>
+            <?php else: ?>
+                <a href="login.php" style="color: teal; font-weight: bold;">Login</a>
+            <?php endif; ?>
+        </div>
+    </div>
 
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Skill</th>
-            <th>Send Swap Request</th>
-        </tr>
-        <?php
-        $sql = "SELECT * FROM users";
-        $result = $conn->query($sql);
+    <?php while ($row = $result->fetch_assoc()): ?>
+        <div class="card">
+            <div class="name"><?= htmlspecialchars($row['name']) ?></div>
+            <div class="skills">
+                <strong style="color: #00cc66;">Skills Offered => </strong>
+                <?php foreach (explode(',', $row['skills_offered']) as $skill): ?>
+                    <span><?= htmlspecialchars(trim($skill)) ?></span>
+                <?php endforeach; ?>
+            </div>
+            <div class="skills">
+                <strong style="color: #3399ff;">Skills Wanted => </strong>
+                <?php foreach (explode(',', $row['skills_wanted']) as $skill): ?>
+                    <span><?= htmlspecialchars(trim($skill)) ?></span>
+                <?php endforeach; ?>
+            </div>
+            <div class="rating">Rating: <?= number_format($row['rating'], 1) ?>/5</div>
+            <button class="request-btn" onclick="handleRequest(<?= $row['id'] ?>)">Request</button>
+        </div>
+    <?php endwhile; ?>
 
-        while($row = $result->fetch_assoc()) {
-            echo "<tr>
-                    <td>{$row['id']}</td>
-                    <td>{$row['name']}</td>
-                    <td>{$row['email']}</td>
-                    <td>{$row['skill']}</td>
-                    <td>
-                        <form class='swap-form' method='POST' action='request_swap.php'>
-                            <input type='hidden' name='from_user_id' value='1'> <!-- Change this to current user ID if using auth -->
-                            <input type='hidden' name='to_user_id' value='{$row['id']}'>
-                            <input type='text' name='offered_skill' placeholder='Your Skill' required><br>
-                            <input type='text' name='requested_skill' placeholder='Skill You Want' required><br>
-                            <button type='submit'>Send</button>
-                        </form>
-                    </td>
-                  </tr>";
-        }
-        ?>
-    </table>
+    <div class="pagination">
+        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+            <a href="?page=<?= $i ?>" class="<?= ($page == $i) ? 'active' : '' ?>"><?= $i ?></a>
+        <?php endfor; ?>
+    </div>
+</div>
+
+<script>
+    function handleRequest(userId) {
+        <?php if (!isset($_SESSION['username'])): ?>
+        alert("Please login to send a request.");
+        window.location.href = "add_skill.php";
+        <?php else: ?>
+        window.location.href = "request_swap.php?to_id=" + userId;
+        <?php endif; ?>
+    }
+</script>
 </body>
 </html>
