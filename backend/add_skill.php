@@ -1,23 +1,28 @@
 <?php
-// add_skill.php
+session_start();
+$error = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = $_POST['name'];
     $email = $_POST['email'];
-    $skill = $_POST['skill'];
+    $password = $_POST['password'];
 
-    $conn = new mysqli("localhost", "root", "", "skill_swap_platform"); // update db name
+    $conn = new mysqli("localhost", "root", "", "skill_swap_platform");
 
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    $sql = "INSERT INTO users (name, email, skill) VALUES ('$name', '$email', '$skill')";
+    $sql = "SELECT * FROM users WHERE email = '$email' AND password = '$password'";
+    $result = $conn->query($sql);
 
-    if ($conn->query($sql) === TRUE) {
-        echo "<p class='success'>New user added successfully!</p>";
+    if ($result->num_rows == 1) {
+        $user = $result->fetch_assoc();
+        $_SESSION['username'] = $user['name'];
+        $_SESSION['email'] = $user['email'];
+        header("Location: index.php");
+        exit();
     } else {
-        echo "<p class='error'>Error: " . $conn->error . "</p>";
+        $error = "Invalid email or password!";
     }
 
     $conn->close();
@@ -27,59 +32,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Add Skill</title>
+    <title>Login</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             padding: 40px;
             background: linear-gradient(to right, #f8f9fa, #e3f2fd);
-        }
-
-        h2 {
-            color: #2c3e50;
         }
 
         form {
             background-color: white;
             padding: 30px;
-            max-width: 450px;
+            max-width: 400px;
+            margin: auto;
             border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         label {
             display: block;
-            margin-top: 15px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: bold;
-            color: #555;
         }
 
-        input[type=text],
         input[type=email],
+        input[type=password],
         button {
             width: 100%;
             padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
             margin-bottom: 15px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
         }
 
         button {
             background-color: #007bff;
             color: white;
+            border: none;
             cursor: pointer;
-            transition: background-color 0.3s ease;
         }
 
         button:hover {
             background-color: #0056b3;
-        }
-
-        .success {
-            color: green;
-            font-weight: bold;
         }
 
         .error {
@@ -89,9 +84,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         a {
             display: inline-block;
-            margin-top: 20px;
-            text-decoration: none;
+            margin-top: 15px;
             color: #007bff;
+            text-decoration: none;
         }
 
         a:hover {
@@ -101,21 +96,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
 
-<h2>Add New User with Skill</h2>
-<form method="post" action="">
-    <label for="name">Name:</label>
-    <input type="text" name="name" required>
-
+<h2 style="text-align:center;">Login</h2>
+<form method="POST" action="">
+    <?php if ($error): ?>
+        <p class="error"><?= $error ?></p>
+    <?php endif; ?>
     <label for="email">Email:</label>
     <input type="email" name="email" required>
 
-    <label for="skill">Skill:</label>
-    <input type="text" name="skill" required>
+    <label for="password">Password:</label>
+    <input type="password" name="password" required>
 
-    <button type="submit">Add User</button>
+    <button type="submit">Login</button>
+    <a href="index.php">← Back to Home</a>
 </form>
-
-<a href="index.php">← Back to Home</a>
 
 </body>
 </html>
